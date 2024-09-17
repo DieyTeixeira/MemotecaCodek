@@ -131,12 +131,11 @@ fun PensamentosScreen(
         ) {
             Box(
                 Modifier
-                    .rotate(-90f)
-                    .padding(start = 10.dp),
+                    .rotate(-90f),
                 Alignment.CenterStart
             ) {
                 Text(
-                    text = "CARDS",
+                    text = "MEMOTECA\nCODEK",
                     fontSize = 20.sp,
                     color = Color(0xFF8F4A0E),
                     fontWeight = FontWeight.Bold
@@ -146,7 +145,7 @@ fun PensamentosScreen(
                 painter = painterResource(id = R.drawable.login_laranja),
                 contentDescription = null,
                 modifier = Modifier
-                    .padding(end = 10.dp)
+                    .padding(end = 25.dp)
                     .align(Alignment.CenterVertically)
             )
         }
