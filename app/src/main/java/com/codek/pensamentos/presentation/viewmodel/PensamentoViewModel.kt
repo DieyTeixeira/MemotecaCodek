@@ -3,7 +3,7 @@ package com.codek.pensamentos.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codek.pensamentos.data.model.Pensamento
-import com.codek.pensamentos.domain.repository.PensamentoRepository
+import com.codek.pensamentos.data.repository.PensamentoRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,11 +23,14 @@ class PensamentoViewModel(
     private val _showDialog = MutableStateFlow(false)
     val showDialog: StateFlow<Boolean> = _showDialog
 
-    private val _expandedPensamentoId = MutableStateFlow<Int?>(null)
-    val expandedPensamentoId: StateFlow<Int?> = _expandedPensamentoId
-
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
+
+    private val _isExpandedOptions = MutableStateFlow<Int?>(null)
+    val isExpandedOptions: StateFlow<Int?> = _isExpandedOptions
+
+    private val _isExpandedCard = MutableStateFlow<Int?>(null)
+    val isExpandedCard: StateFlow<Int?> = _isExpandedCard
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -111,8 +114,12 @@ class PensamentoViewModel(
         _showDialog.value = show
     }
 
-    fun setExpandedPensamentoId(id: Int?) {
-        _expandedPensamentoId.value = id
+    fun setExpandedOptions(id: Int?) {
+        _isExpandedOptions.value = id
+    }
+
+    fun setExpandedCard(id: Int?) {
+        _isExpandedCard.value = id
     }
 
     fun setErrorMessage(message: String?) {

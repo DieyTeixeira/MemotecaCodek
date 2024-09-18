@@ -1,4 +1,4 @@
-package com.codek.pensamentos.domain.repository
+package com.codek.pensamentos.data.repository
 
 import com.codek.pensamentos.data.api.PensamentoApi
 import com.codek.pensamentos.data.model.Pensamento
@@ -13,22 +13,22 @@ interface PensamentoRepository {
 
 class PensamentoRepositoryImpl(private val api: PensamentoApi) : PensamentoRepository {
     override suspend fun getPensamentos(): List<Pensamento> {
-        return api.getPensamentos() // Método fictício, ajuste conforme a sua API
+        return api.getPensamentos()
     }
 
     override suspend fun getPensamentoById(id: String): Pensamento {
-        return api.getPensamentoById(id) // Método fictício, ajuste conforme a sua API
+        return api.getPensamentoById(id)
     }
 
     override suspend fun createPensamento(pensamento: Pensamento): Pensamento {
-        return api.createPensamento(pensamento) // Método fictício, ajuste conforme a sua API
+        return api.createPensamento(pensamento)
     }
 
     override suspend fun deletePensamento(id: String) {
-        api.deletePensamento(id) // Método fictício, ajuste conforme a sua API
+        api.deletePensamento(id)
     }
 
     override suspend fun updatePensamento(id: String, pensamento: Pensamento): Pensamento {
-        return api.updatePensamento(id, pensamento) // Método fictício, ajuste conforme a sua API
+        return api.updatePensamento(id, pensamento)
     }
 }

@@ -3,10 +3,10 @@ package com.codek.pensamentos.data.api
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-object ApiClient {
+object ApiCreateVersionador {
     private const val BASE_URL = "https://codekst.com.br/"
 
-    fun createService(apiClass: Class<PensamentoApi>): PensamentoApi {
+    fun createVersionador(apiClass: Class<VersionadorApi>): VersionadorApi {
         val retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())

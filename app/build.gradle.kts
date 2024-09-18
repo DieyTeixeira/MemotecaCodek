@@ -5,16 +5,15 @@ plugins {
 }
 
 android {
-    namespace = "br.com.dieyteixeira.pensamentos"
-    compileSdk = 34
+    namespace = "com.codek.pensamentos"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "br.com.dieyteixeira.pensamentos"
+        applicationId = "com.codek.pensamentos"
         minSdk = 26
-        //noinspection OldTargetApi
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -37,11 +36,14 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 dependencies {
 
+    implementation(libs.koin.androidx.compose)
+    implementation(libs.koin.android)
     implementation(libs.androidx.material)
     implementation(libs.material3)
     implementation(libs.ui)
@@ -74,5 +76,14 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // dependências para vídeo
+    implementation(libs.exoplayer)
+    implementation(libs.exoplayer.core)
+    implementation(libs.exoplayer.ui)
+    implementation(libs.exoplayer.hls)
+    implementation(libs.exoplayer.dash)
+    implementation(libs.exoplayer.smoothstreaming)
+    implementation(libs.extension.mediasession)
 
 }

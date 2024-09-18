@@ -25,13 +25,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -47,31 +48,39 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import br.com.dieyteixeira.pensamentos.R
-import com.codek.pensamentos.data.api.ApiClient
+import com.codek.pensamentos.R
+import com.codek.pensamentos.data.api.ApiCreatePensamento
+import com.codek.pensamentos.data.api.ApiCreateVersionador
 import com.codek.pensamentos.data.api.PensamentoApi
-import com.codek.pensamentos.domain.repository.PensamentoRepositoryImpl
+import com.codek.pensamentos.data.api.VersionadorApi
+import com.codek.pensamentos.data.repository.PensamentoRepositoryImpl
+import com.codek.pensamentos.data.repository.VersionadorRepositoryImpl
 import com.codek.pensamentos.presentation.ui.composables.Baseboard
 import com.codek.pensamentos.presentation.ui.composables.PensamentoCard
 import com.codek.pensamentos.presentation.ui.composables.PensamentoDialog
 import com.codek.pensamentos.presentation.ui.composables.SkeletonCard
 import com.codek.pensamentos.presentation.viewmodel.PensamentoViewModel
+import com.codek.pensamentos.presentation.viewmodel.VersionadorViewModel
 import com.codek.pensamentos.theme.CodekTheme
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun PensamentosScreen(
-    viewModel: PensamentoViewModel,
+    pensamentoViewModel: PensamentoViewModel,
+    versionadorViewModel: VersionadorViewModel,
     backgroundColor: Color = Color(0xFFF7F8FA)
 ) {
-    val pensamentos by viewModel.pensamentos.collectAsState()
-    val currentPensamento by viewModel.currentPensamento.collectAsState()
-    val showDialog by viewModel.showDialog.collectAsState()
-    val expandedPensamentoId by viewModel.expandedPensamentoId.collectAsState()
-    val errorMessage by viewModel.errorMessage.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val pensamentos by pensamentoViewModel.pensamentos.collectAsState()
+    val currentPensamento by pensamentoViewModel.currentPensamento.collectAsState()
+    val showDialog by pensamentoViewModel.showDialog.collectAsState()
+    val errorMessage by pensamentoViewModel.errorMessage.collectAsState()
+    val isExpandedOptions by pensamentoViewModel.isExpandedOptions.collectAsState()
+    val isExpandedCard by pensamentoViewModel.isExpandedCard.collectAsState()
+    val isLoading by pensamentoViewModel.isLoading.collectAsState()
+    val isRefreshing by pensamentoViewModel.isRefreshing.collectAsState()
+    val showVersionDialog by versionadorViewModel.showVersionDialog.collectAsState()
+    val versionMessage by versionadorViewModel.versionMessage.collectAsState()
 
     val scope = rememberCoroutineScope()
 
@@ -79,32 +88,49 @@ fun PensamentosScreen(
         refreshing = isRefreshing,
         onRefresh = {
             scope.launch {
-                viewModel.refreshPensamentos()
+                pensamentoViewModel.refreshPensamentos()
             }
         }
     )
 
     LaunchedEffect(Unit) {
-        viewModel.loadPensamentos()
+        pensamentoViewModel.loadPensamentos()
+    }
+
+    if (showVersionDialog) {
+        AlertDialog(
+            onDismissRequest = { versionadorViewModel.setShowVersionDialog(false) },
+            confirmButton = {
+                TextButton(onClick = { versionadorViewModel.setShowVersionDialog(false) }) {
+                    Text("OK")
+                }
+            },
+            title = {
+                Text(text = "Atualização de Versão")
+            },
+            text = {
+                Text(text = versionMessage)
+            }
+        )
     }
 
     if (showDialog) {
         PensamentoDialog(
             pensamento = currentPensamento,
-            onDismiss = { viewModel.setShowDialog(false) },
+            onDismiss = { pensamentoViewModel.setShowDialog(false) },
             onSave = { newPensamento ->
                 scope.launch {
                     if (currentPensamento != null) {
-                        viewModel.updatePensamento(currentPensamento!!.id.toString(), newPensamento)
+                        pensamentoViewModel.updatePensamento(currentPensamento!!.id.toString(), newPensamento)
                     } else {
-                        viewModel.createPensamento(newPensamento)
+                        pensamentoViewModel.createPensamento(newPensamento)
                     }
-                    viewModel.setShowDialog(false)
+                    pensamentoViewModel.setShowDialog(false)
                 }
             },
             onRefresh = {
                 scope.launch {
-                    viewModel.refreshPensamentos()
+                    pensamentoViewModel.refreshPensamentos()
                 }
             }
         )
@@ -118,7 +144,8 @@ fun PensamentosScreen(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             ) {
-                viewModel.setExpandedPensamentoId(null)
+                pensamentoViewModel.setExpandedOptions(null)
+                pensamentoViewModel.setExpandedCard(null)
             }
     ) {
         Row(
@@ -162,9 +189,10 @@ fun PensamentosScreen(
                     .background(Color(0xFF8F4A0E))
                     .padding(10.dp, 5.dp)
                     .clickable {
-                        viewModel.setCurrentPensamento(null)
-                        viewModel.setShowDialog(true)
-                        viewModel.setExpandedPensamentoId(null)
+                        pensamentoViewModel.setCurrentPensamento(null)
+                        pensamentoViewModel.setShowDialog(true)
+                        pensamentoViewModel.setExpandedOptions(null)
+                        pensamentoViewModel.setExpandedCard(null)
                     },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
@@ -273,18 +301,26 @@ fun PensamentosScreen(
                         items(pensamentos) { pensamento ->
                             PensamentoCard(
                                 pensamento = pensamento,
-                                isExpanded = expandedPensamentoId == pensamento.id,
+                                isExpandedCard = isExpandedCard == pensamento.id,
+                                isExpandedOptions = isExpandedOptions == pensamento.id,
                                 onEdit = {
-                                    viewModel.setCurrentPensamento(pensamento)
-                                    viewModel.setShowDialog(true)
-                                    viewModel.setExpandedPensamentoId(null)
+                                    pensamentoViewModel.setCurrentPensamento(pensamento)
+                                    pensamentoViewModel.setShowDialog(true)
+                                    pensamentoViewModel.setExpandedOptions(null)
+                                    pensamentoViewModel.setExpandedCard(null)
                                 },
                                 onDelete = {
-                                    viewModel.deletePensamento(pensamento.id.toString())
+                                    pensamentoViewModel.deletePensamento(pensamento.id.toString())
                                 },
                                 onClick = {
-                                    viewModel.setExpandedPensamentoId(
-                                        if (expandedPensamentoId == pensamento.id) null else pensamento.id
+                                    pensamentoViewModel.setExpandedCard(
+                                        if (isExpandedCard == pensamento.id) null else pensamento.id
+                                    )
+                                    pensamentoViewModel.setExpandedOptions(null)
+                                },
+                                onLongClick = {
+                                    pensamentoViewModel.setExpandedOptions(
+                                        if (isExpandedOptions == pensamento.id) null else pensamento.id
                                     )
                                 }
                             )
@@ -315,7 +351,20 @@ fun String.toColor(): Color {
 private fun ChatsListScreenPreview() {
     CodekTheme {
         PensamentosScreen(
-            viewModel = PensamentoViewModel(PensamentoRepositoryImpl(ApiClient.createService(PensamentoApi::class.java)))
+            pensamentoViewModel = PensamentoViewModel(
+                PensamentoRepositoryImpl(
+                    ApiCreatePensamento.createPensamento(
+                        PensamentoApi::class.java
+                    )
+                )
+            ),
+            versionadorViewModel = VersionadorViewModel(
+                VersionadorRepositoryImpl(
+                    ApiCreateVersionador.createVersionador(
+                        VersionadorApi::class.java
+                    )
+                )
+            )
         )
     }
 }

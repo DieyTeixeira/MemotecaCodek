@@ -19,9 +19,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,22 +37,28 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import br.com.dieyteixeira.pensamentos.R
-import com.codek.pensamentos.presentation.ui.layouts.toColor
+import com.codek.pensamentos.R
 import com.codek.pensamentos.data.model.Pensamento
+import com.codek.pensamentos.presentation.ui.layouts.toColor
 
 @Composable
 fun PensamentoCard(
     pensamento: Pensamento,
-    isExpanded: Boolean,
+    isExpandedCard: Boolean,
+    isExpandedOptions: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     val primaryColor = pensamento.cor_pri?.toColor() ?: Color(0xFF727171)
     val secondaryColor = pensamento.cor_sec?.toColor() ?: Color(0xFFE7E6E6)
+
+    var isTextOverflowing by remember { mutableStateOf(false) }
+    var isExpandCard by remember { mutableStateOf(isExpandedCard) }
 
     // card principal
     Box(
@@ -58,7 +69,7 @@ fun PensamentoCard(
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { onClick() },
-                    onLongPress = { onClick() }
+                    onLongPress = { onLongClick() }
                 )
             }
     ) {
@@ -100,12 +111,46 @@ fun PensamentoCard(
                         text = pensamento.conteudo,
                         fontSize = 14.sp,
                         color = Color.DarkGray,
-                        fontStyle = FontStyle.Italic
+                        lineHeight = 22.sp,
+                        maxLines = if (isExpandedCard) Int.MAX_VALUE else 5,
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { textLayoutResult ->
+                            isTextOverflowing = textLayoutResult.hasVisualOverflow
+                        }
                     )
+                    if (isTextOverflowing) {
+                        Row (
+                            verticalAlignment = Alignment.Bottom
+                        ){
+                            Text(
+                                text = "Ver mais",
+                                color = primaryColor,
+                                modifier = Modifier
+                                    .padding(top = 4.dp)
+                                    .clickable {
+                                        isExpandCard = !isExpandedCard
+                                        onClick()
+                                    },
+                                fontSize = 14.sp,
+                                fontStyle = FontStyle.Italic,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = primaryColor,
+                                modifier = Modifier
+                                    .clickable {
+                                        isExpandCard = !isExpandedCard
+                                        onClick()
+                                    }
+                            )
+                        }
+                    }
                     Spacer(Modifier.size(10.dp))
                     Column(
                         Modifier
-                            .padding(end = if (isExpanded) 0.dp else 38.dp),
+                            .padding(end = if (isExpandedOptions) 0.dp else 38.dp),
                         horizontalAlignment = Alignment.End
                     ) {
                         Box(
@@ -125,7 +170,7 @@ fun PensamentoCard(
                 }
             }
 
-            if (isExpanded) {
+            if (isExpandedOptions) {
                 Column(
                     Modifier
                         .weight(0.08f)
