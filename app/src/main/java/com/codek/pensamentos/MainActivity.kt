@@ -18,7 +18,7 @@ import com.codek.pensamentos.theme.CodekTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        enableEdgeToEdge()
+        enableEdgeToEdge()
 
         val apiClient = ApiClient.createService(PensamentoApi::class.java)
         val repository = PensamentoRepositoryImpl(apiClient)
