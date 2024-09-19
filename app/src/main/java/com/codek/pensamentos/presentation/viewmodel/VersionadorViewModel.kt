@@ -1,9 +1,13 @@
 package com.codek.pensamentos.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.codek.pensamentos.data.model.Pensamento
 import com.codek.pensamentos.data.model.Versionador
 import com.codek.pensamentos.data.repository.VersionadorRepository
+import com.codek.pensamentos.data.version.currentVersionCode
+import com.codek.pensamentos.data.version.currentVersionName
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -12,44 +16,65 @@ class VersionadorViewModel(
     private val versionadorRepository: VersionadorRepository
 ) : ViewModel() {
 
+    // Variáveis para lastVersionCode e lastVersionName
+    private val _lastVersionCode = MutableStateFlow<Int?>(null)
+    val lastVersionCode: StateFlow<Int?> = _lastVersionCode
+
     private val _lastVersionName = MutableStateFlow<String?>(null)
     val lastVersionName: StateFlow<String?> = _lastVersionName
 
-    private val _showVersionDialog = MutableStateFlow(false)
-    val showVersionDialog: StateFlow<Boolean> = _showVersionDialog
+    private val _versionador = MutableStateFlow<Versionador?>(null)
+    val versionador: StateFlow<Versionador?> = _versionador
 
-    private val _versionMessage = MutableStateFlow("")
-    val versionMessage: StateFlow<String> = _versionMessage
+    private val _showDialog = MutableStateFlow(false)
+    val showDialog: StateFlow<Boolean> = _showDialog
 
-    fun loadLastVersionNameById(id: Int) {
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    init {
+        loadLastVersionData(id = 1)
+    }
+
+    fun loadLastVersionData(id: Int) {
         viewModelScope.launch {
             try {
-                val versionName = versionadorRepository.getLastVersionNameById(id)
-                _lastVersionName.value = versionName
+                val response = versionadorRepository.getVersionadorById(id)
+                // Atualiza os valores de lastVersionCode e lastVersionName
+                _lastVersionCode.value = response.lastVersionCode
+                _lastVersionName.value = response.lastVersionName
+                _versionador.value = response
+                _errorMessage.value = null
             } catch (e: Exception) {
-                _lastVersionName.value = "Erro ao conectar com o banco de versionamento"
+                _errorMessage.value = e.message
             }
         }
     }
 
-    fun updateVersionador(newVersionador: Versionador) {
+    fun updateVersionador() {
+        Log.d("VersionadorViewModel", "Atualizando versionador com ID: 1")
         viewModelScope.launch {
+            Log.d("VersionadorViewModel", "Tentando atualizar versionador com ID: 1")
             try {
-                versionadorRepository.updateVersionador(newVersionador.id, newVersionador)
-                setVersionMessage("Versão atualizada com sucesso no servidor!")
+                // Criar um novo objeto Versionador com os dados atuais
+                val updatedVersionador = Versionador(
+                    id = 1,
+                    lastVersionCode = currentVersionCode,
+                    lastVersionName = currentVersionName
+                )
+
+                val response = versionadorRepository.updateVersionador(1, updatedVersionador)
+                Log.d("VersionadorViewModel", "Versionador atualizado com sucesso: $response")
+                _versionador.value = response
+                _errorMessage.value = null
             } catch (e: Exception) {
-                setVersionMessage("Erro ao atualizar a versão: ${e.message}")
-            } finally {
-                setShowVersionDialog(true)
+                Log.e("VersionadorViewModel", "Erro ao atualizar versionador", e)
+                _errorMessage.value = e.message
             }
         }
     }
 
-    fun setVersionMessage(message: String) {
-        _versionMessage.value = message
-    }
-
-    fun setShowVersionDialog(show: Boolean) {
-        _showVersionDialog.value = show
+    fun setShowDialog(show: Boolean) {
+        _showDialog.value = show
     }
 }

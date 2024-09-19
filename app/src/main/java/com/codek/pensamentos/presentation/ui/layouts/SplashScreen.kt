@@ -1,4 +1,4 @@
-package com.codek.pensamentos.presentation.navigation
+package com.codek.pensamentos.presentation.ui.layouts
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -19,17 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.compose.composable
 import kotlinx.coroutines.delay
-
-const val splashScreenRoute = "splashscreen"
-
-fun NavGraphBuilder.splashScreen() {
-    composable(splashScreenRoute) {
-        SplashScreen()
-    }
-}
 
 @Composable
 fun SplashScreen() {

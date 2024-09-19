@@ -72,17 +72,6 @@ class PensamentoViewModel(
         }
     }
 
-//    fun deletePensamento(id: Int?) {
-//        viewModelScope.launch {
-//            try {
-//                id?.let { pensamentoRepository.deletePensamento(it) }
-//                _pensamentos.value = _pensamentos.value.filter { it.id != id }
-//            } catch (e: Exception) {
-//                _errorMessage.value = e.message
-//            }
-//        }
-//    }
-
     fun deletePensamento(id: Int?) {
         if (id == null) {
             _errorMessage.value = "Pensamento inválido para deletar."

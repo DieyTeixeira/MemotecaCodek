@@ -15,16 +15,12 @@ import com.codek.pensamentos.presentation.viewmodel.VersionadorViewModel
 
 const val pensamentosRoute = "pensamentos"
 
-fun NavGraphBuilder.pensamentosScreen(
-) {
+fun NavGraphBuilder.pensamentosScreen() {
     composable(pensamentosRoute) {
 
-        // instanciando o viewModel do pensamento
         val apiCreatePensamento = ApiCreatePensamento.createPensamento(PensamentoApi::class.java)
         val repositoryPensamento = PensamentoRepositoryImpl(apiCreatePensamento)
         val pensamentoViewModel = PensamentoViewModel(repositoryPensamento)
-
-        // instanciando o viewModel do versionador
         val apiCreateVersionador = ApiCreateVersionador.createVersionador(VersionadorApi::class.java)
         val repositoryVersionador = VersionadorRepositoryImpl(apiCreateVersionador)
         val versionadorViewModel = VersionadorViewModel(repositoryVersionador)

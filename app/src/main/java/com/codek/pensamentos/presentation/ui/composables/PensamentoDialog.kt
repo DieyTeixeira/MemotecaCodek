@@ -55,11 +55,6 @@ fun PensamentoDialog(
 ) {
     var conteudo by remember { mutableStateOf(pensamento?.conteudo ?: "") }
     var autoria by remember { mutableStateOf(pensamento?.autoria ?: "") }
-    var selectedPrimaryColor by remember { mutableStateOf(pensamento?.cor_pri ?: "") }
-    var selectedSecondaryColor by remember { mutableStateOf(pensamento?.cor_sec ?: "") }
-
-    val colorPrimary = if (selectedPrimaryColor.isNotBlank()) selectedPrimaryColor.toColor() else Color.Gray
-    val colorSecondary = if (selectedSecondaryColor.isNotBlank()) selectedSecondaryColor.toColor() else Color.LightGray
 
     val colorOptions = listOf(
         // aspas to card
@@ -69,6 +64,15 @@ fun PensamentoDialog(
         "#FFC000" to "#FFF2CC",
         "#B74919" to "#F7D7C9"
     )
+
+    val defaultPrimaryColor = colorOptions.first().first
+    val defaultSecondaryColor = colorOptions.first().second
+
+    var selectedPrimaryColor by remember { mutableStateOf(pensamento?.cor_pri ?: defaultPrimaryColor) }
+    var selectedSecondaryColor by remember { mutableStateOf(pensamento?.cor_sec ?: defaultSecondaryColor) }
+
+    val colorPrimary = selectedPrimaryColor.toColor()
+    val colorSecondary = selectedSecondaryColor.toColor()
 
     Dialog(onDismissRequest = { onDismiss() }) {
         Box(

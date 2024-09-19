@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -33,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -53,16 +55,18 @@ import com.codek.pensamentos.data.api.ApiCreatePensamento
 import com.codek.pensamentos.data.api.ApiCreateVersionador
 import com.codek.pensamentos.data.api.PensamentoApi
 import com.codek.pensamentos.data.api.VersionadorApi
+import com.codek.pensamentos.data.model.Pensamento
 import com.codek.pensamentos.data.repository.PensamentoRepositoryImpl
 import com.codek.pensamentos.data.repository.VersionadorRepositoryImpl
-import com.codek.pensamentos.presentation.ui.composables.Baseboard
+import com.codek.pensamentos.data.version.currentVersionCode
+import com.codek.pensamentos.data.version.currentVersionName
+import com.codek.pensamentos.presentation.ui.fragments.Baseboard
 import com.codek.pensamentos.presentation.ui.composables.PensamentoCard
 import com.codek.pensamentos.presentation.ui.composables.PensamentoDialog
 import com.codek.pensamentos.presentation.ui.composables.SkeletonCard
 import com.codek.pensamentos.presentation.viewmodel.PensamentoViewModel
 import com.codek.pensamentos.presentation.viewmodel.VersionadorViewModel
 import com.codek.pensamentos.theme.CodekTheme
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -72,16 +76,19 @@ fun PensamentosScreen(
     versionadorViewModel: VersionadorViewModel,
     backgroundColor: Color = Color(0xFFF7F8FA)
 ) {
+    // viewmodel Pensamentos
     val pensamentos by pensamentoViewModel.pensamentos.collectAsState()
     val currentPensamento by pensamentoViewModel.currentPensamento.collectAsState()
-    val showDialog by pensamentoViewModel.showDialog.collectAsState()
+    val showDialogPensamentoEdit by pensamentoViewModel.showDialog.collectAsState()
     val errorMessage by pensamentoViewModel.errorMessage.collectAsState()
     val isExpandedOptions by pensamentoViewModel.isExpandedOptions.collectAsState()
     val isExpandedCard by pensamentoViewModel.isExpandedCard.collectAsState()
     val isLoading by pensamentoViewModel.isLoading.collectAsState()
     val isRefreshing by pensamentoViewModel.isRefreshing.collectAsState()
-    val showVersionDialog by versionadorViewModel.showVersionDialog.collectAsState()
-    val versionMessage by versionadorViewModel.versionMessage.collectAsState()
+
+    val lastVersionCode by versionadorViewModel.lastVersionCode.collectAsState()
+    val lastVersionName by versionadorViewModel.lastVersionName.collectAsState()
+    val showDialogVersion = remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -98,24 +105,42 @@ fun PensamentosScreen(
         pensamentoViewModel.loadPensamentos()
     }
 
-    if (showVersionDialog) {
+    if (showDialogVersion.value) {
         AlertDialog(
-            onDismissRequest = { versionadorViewModel.setShowVersionDialog(false) },
-            confirmButton = {
-                TextButton(onClick = { versionadorViewModel.setShowVersionDialog(false) }) {
-                    Text("OK")
+            onDismissRequest = { showDialogVersion.value = false },
+            confirmButton = { },
+            title = {
+                Column(
+                    Modifier
+                        .padding(5.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = "Verificação de Versões")
                 }
             },
-            title = {
-                Text(text = "Atualização de Versão")
-            },
             text = {
-                Text(text = versionMessage)
+                Column(
+                    Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = "Versão do App", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.size(5.dp))
+                    Text(text = "$currentVersionCode")
+                    Text(text = currentVersionName)
+                    Spacer(modifier = Modifier.size(15.dp))
+                    Text(text = "Versão do Versionador", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.size(5.dp))
+                    Text(text = "$lastVersionCode")
+                    Text(text = "$lastVersionName")
+                }
             }
         )
     }
 
-    if (showDialog) {
+    if (showDialogPensamentoEdit) {
         PensamentoDialog(
             pensamento = currentPensamento,
             onDismiss = { pensamentoViewModel.setShowDialog(false) },
@@ -163,7 +188,7 @@ fun PensamentosScreen(
                 Alignment.CenterStart
             ) {
                 Text(
-                    text = "MEMOTECA\nCODEK-",
+                    text = "MEMOTECA\nCODEK",
                     fontSize = 20.sp,
                     color = Color(0xFF8F4A0E),
                     fontWeight = FontWeight.Bold
@@ -215,7 +240,6 @@ fun PensamentosScreen(
             }
         }
         Spacer(Modifier.size(15.dp))
-
         Box(
             Modifier
                 .fillMaxSize()
@@ -336,7 +360,10 @@ fun PensamentosScreen(
             )
         }
     }
-    Baseboard(color = Color.LightGray)
+    Baseboard(
+        showDialogVersion = showDialogVersion,
+        color = Color.LightGray
+    )
 }
 
 fun String.toColor(): Color {

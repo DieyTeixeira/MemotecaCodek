@@ -1,4 +1,4 @@
-package com.codek.pensamentos.presentation.navigation
+package com.codek.pensamentos.presentation.ui.layouts
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -14,14 +14,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -36,15 +39,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.composable
-import com.codek.pensamentos.BuildConfig
 import com.codek.pensamentos.InstallUpdateApk
 import com.codek.pensamentos.R
-import com.codek.pensamentos.data.api.ApiCreateVersionador
-import com.codek.pensamentos.data.api.VersionadorApi
-import com.codek.pensamentos.data.repository.VersionadorRepositoryImpl
+import com.codek.pensamentos.data.version.currentVersionName
 import com.codek.pensamentos.presentation.viewmodel.VersionadorViewModel
 import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
@@ -56,22 +53,6 @@ import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-const val updateScreenRoute = "updatescreen"
-
-fun NavGraphBuilder.updateScreen() {
-    composable(updateScreenRoute) {
-        UpdateScreen(
-            versionadorViewModel = VersionadorViewModel(
-                VersionadorRepositoryImpl(
-                    ApiCreateVersionador.createVersionador(
-                        VersionadorApi::class.java
-                    )
-                )
-            )
-        )
-    }
-}
-
 @Composable
 fun UpdateScreen(
     versionadorViewModel: VersionadorViewModel
@@ -79,8 +60,15 @@ fun UpdateScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
-    val currentVersionName = BuildConfig.VERSION_NAME
+    val currentVersionName = currentVersionName
     val lastVersionName by versionadorViewModel.lastVersionName.collectAsState()
+    var isLoading by remember { mutableStateOf(lastVersionName == null) }
+
+    LaunchedEffect(lastVersionName) {
+        if (lastVersionName != null) {
+            isLoading = false
+        }
+    }
 
     BackHandler {
         (context as? android.app.Activity)?.finish()
@@ -136,39 +124,52 @@ fun UpdateScreen(
                 )
             )
             Spacer(modifier = Modifier.height(50.dp))
-            Text(
-                text = "VERSÃO INSTALADA:",
-                style = TextStyle.Default.copy(
-                    fontSize = 15.sp,
-                    color = Color.DarkGray
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = Color.Gray
+                    )
+                }
+            } else {
+                Text(
+                    text = "VERSÃO INSTALADA:",
+                    style = TextStyle.Default.copy(
+                        fontSize = 15.sp,
+                        color = Color.DarkGray
+                    )
                 )
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = currentVersionName,
-                style = TextStyle.Default.copy(
-                    fontSize = 25.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.DarkGray
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = currentVersionName,
+                    style = TextStyle.Default.copy(
+                        fontSize = 25.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.DarkGray
+                    )
                 )
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-            Text(
-                text = "ATUALIZAÇÃO DISPONÍVEL:",
-                style = TextStyle.Default.copy(
-                    fontSize = 15.sp,
-                    color = Color.DarkGray
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = "ATUALIZAÇÃO DISPONÍVEL:",
+                    style = TextStyle.Default.copy(
+                        fontSize = 15.sp,
+                        color = Color.DarkGray
+                    )
                 )
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = "$lastVersionName",
-                style = TextStyle.Default.copy(
-                    fontSize = 25.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.DarkGray
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "$lastVersionName",
+                    style = TextStyle.Default.copy(
+                        fontSize = 25.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.DarkGray
+                    )
                 )
-            )
+            }
             Spacer(modifier = Modifier.height(60.dp))
 
             Box(
@@ -187,13 +188,17 @@ fun UpdateScreen(
                             player.clearMediaItems()
 
                             val concatenatedSource = ConcatenatingMediaSource().apply {
-                                addMediaSource(ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
+                                addMediaSource(
+                                    ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
                                     .createMediaSource(MediaItem.fromUri(shortVideo1Uri)))
-                                addMediaSource(ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
+                                addMediaSource(
+                                    ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
                                     .createMediaSource(MediaItem.fromUri(shortVideo2Uri)))
-                                addMediaSource(ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
+                                addMediaSource(
+                                    ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
                                     .createMediaSource(MediaItem.fromUri(shortVideo3Uri)))
-                                addMediaSource(ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
+                                addMediaSource(
+                                    ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
                                     .createMediaSource(MediaItem.fromUri(loopVideoUri)))
                             }
 
@@ -216,7 +221,7 @@ fun UpdateScreen(
 
                             InstallUpdateApk.downloadAndInstallApk(
                                 context,
-                                "https://www.dropbox.com/scl/fi/zinpphfbbloe43rpcrx8w/Memoteca-Codek.apk?rlkey=ryiun7oxh87lowubfzuns8e6g&st=4ihe2u90&dl=0"
+                                "https://www.dropbox.com/scl/fi/zinpphfbbloe43rpcrx8w/Memoteca-Codek.apk?rlkey=ryiun7oxh87lowubfzuns8e6g&st=4ihe2u90&dl=1"
                             )
                         }
                     }),
@@ -269,8 +274,4 @@ fun UpdateScreen(
             )
         }
     }
-}
-
-fun NavHostController.navigateToUpdateScreen() {
-    navigate(updateScreenRoute)
 }
