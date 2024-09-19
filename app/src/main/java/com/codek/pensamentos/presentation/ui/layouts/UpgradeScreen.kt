@@ -1,8 +1,18 @@
 package com.codek.pensamentos.presentation.ui.layouts
 
-import androidx.activity.compose.BackHandler
+import android.annotation.SuppressLint
+import android.app.DownloadManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.net.Uri
+import android.os.Environment
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,10 +24,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,39 +43,38 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import com.codek.pensamentos.InstallUpdateApk
+import androidx.core.content.FileProvider
 import com.codek.pensamentos.R
 import com.codek.pensamentos.data.version.currentVersionName
 import com.codek.pensamentos.presentation.viewmodel.VersionadorViewModel
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.SimpleExoPlayer
-import com.google.android.exoplayer2.source.ConcatenatingMediaSource
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.ui.PlayerView
-import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import kotlin.random.Random
 
+private const val TAG = "UpdateScreen"
+
+@SuppressLint("UnspecifiedRegisterReceiverFlag", "Range")
 @Composable
 fun UpdateScreen(
     versionadorViewModel: VersionadorViewModel
 ) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val coroutineScope = rememberCoroutineScope()
     val currentVersionName = currentVersionName
     val lastVersionName by versionadorViewModel.lastVersionName.collectAsState()
     var isLoading by remember { mutableStateOf(lastVersionName == null) }
+    var downloadProgress by remember { mutableStateOf(0f) }
+    var downloadId by remember { mutableStateOf<Long?>(null) }
+
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(lastVersionName) {
         if (lastVersionName != null) {
@@ -70,27 +82,34 @@ fun UpdateScreen(
         }
     }
 
-    BackHandler {
-        (context as? android.app.Activity)?.finish()
-    }
-
-    val player = remember { SimpleExoPlayer.Builder(context).build() }
-    val loopVideoUri = "android.resource://${context.packageName}/${R.raw.gif_dog}"
-    val shortVideo1Uri = "android.resource://${context.packageName}/${R.raw.gif_dog_1}"
-    val shortVideo2Uri = "android.resource://${context.packageName}/${R.raw.gif_dog_2}"
-    val shortVideo3Uri = "android.resource://${context.packageName}/${R.raw.gif_dog_3}"
-
-    fun setupPlayer(uri: String) {
-        player.apply {
-            setMediaItem(MediaItem.fromUri(uri))
-            prepare()
-            playWhenReady = true
-            repeatMode = Player.REPEAT_MODE_ONE
+    LaunchedEffect(downloadId) {
+        if (downloadId != null) {
+            coroutineScope.launch {
+                simulateDownloadProgress { progress ->
+                    downloadProgress = progress
+                }
+            }
         }
     }
 
-    LaunchedEffect(Unit) {
-        setupPlayer(loopVideoUri)
+    DisposableEffect(downloadId) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+                Log.d(TAG, "Download completed with ID: $id")
+                if (id == downloadId) {
+                    handleDownloadComplete(context, id) { progress ->
+                        Log.d(TAG, "Download progress updated: $progress")
+                        downloadProgress = progress
+                    }
+                }
+            }
+        }
+
+        context.registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
+        onDispose {
+            context.unregisterReceiver(receiver)
+        }
     }
 
     Box(
@@ -98,17 +117,16 @@ fun UpdateScreen(
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
-                    colors = listOf(Color.LightGray, Color(0xFFFFFFFF)),
+                    colors = listOf(Color.LightGray, Color.White),
                     startY = 0f,
                     endY = 1000f
                 )
             ),
         contentAlignment = Alignment.Center
     ) {
-        Column (
+        Column(
             horizontalAlignment = Alignment.CenterHorizontally
-        ){
-
+        ) {
             Text(
                 text = "Atualização disponível",
                 style = TextStyle.Default.copy(
@@ -175,103 +193,140 @@ fun UpdateScreen(
             Box(
                 modifier = Modifier
                     .width(200.dp)
-                    .height(50.dp) // Ajustar altura do botão
+                    .height(50.dp)
                     .background(
                         color = Color.Gray,
                         shape = RoundedCornerShape(20.dp)
                     )
-                    .clickable(onClick = {
-
-                        coroutineScope.launch {
-                            delay(1000) // Atraso de 1 segundo
-
-                            player.clearMediaItems()
-
-                            val concatenatedSource = ConcatenatingMediaSource().apply {
-                                addMediaSource(
-                                    ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
-                                    .createMediaSource(MediaItem.fromUri(shortVideo1Uri)))
-                                addMediaSource(
-                                    ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
-                                    .createMediaSource(MediaItem.fromUri(shortVideo2Uri)))
-                                addMediaSource(
-                                    ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
-                                    .createMediaSource(MediaItem.fromUri(shortVideo3Uri)))
-                                addMediaSource(
-                                    ProgressiveMediaSource.Factory(DefaultDataSourceFactory(context, "exoplayer"))
-                                    .createMediaSource(MediaItem.fromUri(loopVideoUri)))
-                            }
-
-                            player.repeatMode = Player.REPEAT_MODE_OFF
-                            player.setMediaSource(concatenatedSource)
-                            player.prepare()
-                            player.playWhenReady = true
-                            player.addListener(object : Player.Listener {
-                                override fun onMediaItemTransition(
-                                    mediaItem: MediaItem?,
-                                    reason: Int
-                                ) {
-                                    if (mediaItem?.localConfiguration?.uri.toString() == loopVideoUri) {
-                                        player.repeatMode = Player.REPEAT_MODE_ONE
-                                    } else {
-                                        player.repeatMode = Player.REPEAT_MODE_OFF
-                                    }
-                                }
-                            })
-
-                            InstallUpdateApk.downloadAndInstallApk(
-                                context,
-                                "https://www.dropbox.com/scl/fi/zinpphfbbloe43rpcrx8w/Memoteca-Codek.apk?rlkey=ryiun7oxh87lowubfzuns8e6g&st=4ihe2u90&dl=1"
-                            )
-                        }
-                    }),
+                    .clickable {
+                        Log.d(TAG, "Update button clicked")
+                        downloadId = downloadApk(context)
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_update),
-                        contentDescription = "Atualizar",
-                        tint = Color.White, // Cor do ícone
-                        modifier = Modifier
-                            .size(30.dp)
-                    )
                     Text(
-                        text = "ATUALIZAR",
-                        color = Color.White, // Cor do texto
+                        text = "Baixar APK",
+                        color = Color.White,
                         modifier = Modifier.padding(8.dp),
                         style = TextStyle.Default.copy(
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
-
                     )
                 }
             }
+
+            // Barra de progresso do download
             Spacer(modifier = Modifier.height(20.dp))
-
-            // vídeo mp4
-            AndroidView(
-                factory = { ctx ->
-                    PlayerView(ctx).apply {
-                        this.player = player
-                        this.useController = false
-
-                        lifecycleOwner.lifecycle.addObserver(LifecycleEventObserver { _, event ->
-                            if (event == Lifecycle.Event.ON_PAUSE) {
-                                player.pause()
-                            } else if (event == Lifecycle.Event.ON_RESUME) {
-                                player.play()
-                            }
-                        })
-                    }
-                },
+            LinearProgressIndicator(
+                progress = downloadProgress,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(250.dp)
-                    .background(Color.White)
+                    .padding(horizontal = 16.dp)
+                    .height(8.dp)
             )
+            Log.d(TAG, "Progress bar updated with progress: $downloadProgress")
+
+            Spacer(modifier = Modifier.height(20.dp))
+            if (downloadProgress == 1f) {
+                Text(
+                    text = "Download concluído!\nFaça a instalação.",
+                    style = TextStyle.Default.copy(
+                        fontSize = 15.sp,
+                        color = Color.DarkGray
+                    )
+                )
+            }
         }
+    }
+}
+
+fun downloadApk(context: Context): Long? {
+    val apkUrl = "https://www.dropbox.com/scl/fi/zinpphfbbloe43rpcrx8w/Memoteca-Codek.apk?rlkey=ryiun7oxh87lowubfzuns8e6g&st=4ihe2u90&dl=1"
+    val request = DownloadManager.Request(Uri.parse(apkUrl)).apply {
+        setTitle("Baixando APK")
+        setDescription("Fazendo o download do aplicativo.")
+        setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "memoteca_codek.apk")
+        setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+        setAllowedOverMetered(true)
+        setAllowedOverRoaming(true)
+    }
+
+    val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+    val id = downloadManager.enqueue(request)
+    Log.d(TAG, "Download enqueued with ID: $id")
+    return id
+}
+
+@SuppressLint("Range")
+fun handleDownloadComplete(context: Context, downloadId: Long, onProgressUpdate: (Float) -> Unit) {
+    val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+    val query = DownloadManager.Query().setFilterById(downloadId)
+    val cursor = downloadManager.query(query)
+    if (cursor != null && cursor.moveToFirst()) {
+        try {
+            val status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))
+            val bytesDownloaded = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+            val bytesTotal = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+            val progress = if (bytesTotal > 0) {
+                bytesDownloaded.toFloat() / bytesTotal
+            } else {
+                0f
+            }
+            Log.d(TAG, "Download status: $status, bytesDownloaded: $bytesDownloaded, bytesTotal: $bytesTotal, progress: $progress")
+            onProgressUpdate(progress)
+
+            when (status) {
+                DownloadManager.STATUS_SUCCESSFUL -> {
+                    Log.d(TAG, "Download successful, starting installation")
+                    installApk(context)
+                }
+                DownloadManager.STATUS_FAILED -> {
+                    Log.d(TAG, "Download failed")
+                    Toast.makeText(context, "Download falhou", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error processing download", e)
+            Toast.makeText(context, "Erro ao processar o download: ${e.message}", Toast.LENGTH_SHORT).show()
+        } finally {
+            cursor.close()
+        }
+    } else {
+        Log.e(TAG, "Error querying download")
+        Toast.makeText(context, "Erro ao consultar o download", Toast.LENGTH_SHORT).show()
+    }
+}
+
+// Função para simular o progresso do download
+fun simulateDownloadProgress(onProgressUpdate: (Float) -> Unit) {
+    CoroutineScope(Dispatchers.IO).launch {
+        var progress = 0f
+        while (progress < 1f) {
+            progress += 0.1f
+            withContext(Dispatchers.Main) {
+                onProgressUpdate(progress)
+            }
+            delay( 1200) // Simula o intervalo entre atualizações de progresso
+        }
+    }
+}
+
+fun installApk(context: Context) {
+    val apkFile = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "memoteca_codek.apk")
+    if (apkFile.exists()) {
+        val apkUri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
+        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(apkUri, "application/vnd.android.package-archive")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+        }
+        Log.d(TAG, "Starting APK installation")
+        context.startActivity(installIntent)
+    } else {
+        Log.e(TAG, "APK file not found")
+        Toast.makeText(context, "Falha ao encontrar o APK", Toast.LENGTH_SHORT).show()
     }
 }
