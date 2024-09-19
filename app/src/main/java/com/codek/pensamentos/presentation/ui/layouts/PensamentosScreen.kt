@@ -62,6 +62,7 @@ import com.codek.pensamentos.presentation.ui.composables.SkeletonCard
 import com.codek.pensamentos.presentation.viewmodel.PensamentoViewModel
 import com.codek.pensamentos.presentation.viewmodel.VersionadorViewModel
 import com.codek.pensamentos.theme.CodekTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -121,7 +122,7 @@ fun PensamentosScreen(
             onSave = { newPensamento ->
                 scope.launch {
                     if (currentPensamento != null) {
-                        pensamentoViewModel.updatePensamento(currentPensamento!!.id.toString(), newPensamento)
+                        currentPensamento!!.id?.let { pensamentoViewModel.updatePensamento(it, newPensamento) }
                     } else {
                         pensamentoViewModel.createPensamento(newPensamento)
                     }
@@ -162,7 +163,7 @@ fun PensamentosScreen(
                 Alignment.CenterStart
             ) {
                 Text(
-                    text = "MEMOTECA\nCODEK",
+                    text = "MEMOTECA\nCODEK-",
                     fontSize = 20.sp,
                     color = Color(0xFF8F4A0E),
                     fontWeight = FontWeight.Bold
@@ -310,7 +311,7 @@ fun PensamentosScreen(
                                     pensamentoViewModel.setExpandedCard(null)
                                 },
                                 onDelete = {
-                                    pensamentoViewModel.deletePensamento(pensamento.id.toString())
+                                    pensamentoViewModel.deletePensamento(pensamento.id)
                                 },
                                 onClick = {
                                     pensamentoViewModel.setExpandedCard(

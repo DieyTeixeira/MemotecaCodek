@@ -1,6 +1,7 @@
 package com.codek.pensamentos.data.api
 
 import com.codek.pensamentos.data.model.Pensamento
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -14,15 +15,16 @@ interface PensamentoApi {
     suspend fun getPensamentos(): List<Pensamento>
 
     @GET("pensamentos/{id}")
-    suspend fun getPensamentoById(@Path("id") id: String): Pensamento
+    suspend fun getPensamentoById(@Path("id") id: Int): Pensamento
 
     @POST("pensamentos")
     suspend fun createPensamento(@Body pensamento: Pensamento): Pensamento
 
-    @DELETE("pensamentos/{id}")
-    suspend fun deletePensamento(@Path("id") id: String)
+    @DELETE("pensamento/{id}")
+    suspend fun deletePensamento(@Path("id") id: Int): Response<Unit?>
+
 
     @PUT("pensamentos/{id}")
-    suspend fun updatePensamento(@Path("id") id: String, @Body pensamento: Pensamento): Pensamento
+    suspend fun updatePensamento(@Path("id") id: Int, @Body pensamento: Pensamento): Pensamento
 
 }

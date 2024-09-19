@@ -5,10 +5,10 @@ import com.codek.pensamentos.data.model.Pensamento
 
 interface PensamentoRepository {
     suspend fun getPensamentos(): List<Pensamento>
-    suspend fun getPensamentoById(id: String): Pensamento
+    suspend fun getPensamentoById(id: Int): Pensamento
     suspend fun createPensamento(pensamento: Pensamento): Pensamento
-    suspend fun deletePensamento(id: String)
-    suspend fun updatePensamento(id: String, pensamento: Pensamento): Pensamento
+    suspend fun deletePensamento(id: Int)
+    suspend fun updatePensamento(id: Int, pensamento: Pensamento): Pensamento
 }
 
 class PensamentoRepositoryImpl(private val api: PensamentoApi) : PensamentoRepository {
@@ -16,7 +16,7 @@ class PensamentoRepositoryImpl(private val api: PensamentoApi) : PensamentoRepos
         return api.getPensamentos()
     }
 
-    override suspend fun getPensamentoById(id: String): Pensamento {
+    override suspend fun getPensamentoById(id: Int): Pensamento {
         return api.getPensamentoById(id)
     }
 
@@ -24,11 +24,11 @@ class PensamentoRepositoryImpl(private val api: PensamentoApi) : PensamentoRepos
         return api.createPensamento(pensamento)
     }
 
-    override suspend fun deletePensamento(id: String) {
+    override suspend fun deletePensamento(id: Int) {
         api.deletePensamento(id)
     }
 
-    override suspend fun updatePensamento(id: String, pensamento: Pensamento): Pensamento {
+    override suspend fun updatePensamento(id: Int, pensamento: Pensamento): Pensamento {
         return api.updatePensamento(id, pensamento)
     }
 }

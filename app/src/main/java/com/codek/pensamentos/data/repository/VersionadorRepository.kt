@@ -30,7 +30,7 @@ class VersionadorRepositoryImpl(private val api: VersionadorApi) : VersionadorRe
     }
 
     override suspend fun updateVersionador(id: Int, versionador: Versionador): Versionador {
-        return api.updateVersionador(id, versionador)
+        return api.updateVersionador(1, versionador)
     }
 
     override suspend fun getLastVersionNameById(id: Int): String {

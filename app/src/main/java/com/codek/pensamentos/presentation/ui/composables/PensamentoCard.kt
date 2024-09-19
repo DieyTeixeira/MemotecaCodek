@@ -196,6 +196,7 @@ fun PensamentoCard(
                                 .size(15.dp)
                                 .clickable {
                                     onDelete()
+
                                 }
                         )
                     }

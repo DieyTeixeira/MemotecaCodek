@@ -1,7 +1,7 @@
 package com.codek.pensamentos.data.model
 
-data class Versionador(
+data class Versionador (
     val id: Int = 1,
-    val lastVersion: Int,
-    val lastVersionName: String,
+    val lastVersion: Int = 1,
+    val lastVersionName: String = "1.0.0",
 )

@@ -1,5 +1,6 @@
 package com.codek.pensamentos.presentation.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.codek.pensamentos.data.model.Pensamento
@@ -71,16 +72,36 @@ class PensamentoViewModel(
         }
     }
 
-    fun deletePensamento(id: String) {
+//    fun deletePensamento(id: Int?) {
+//        viewModelScope.launch {
+//            try {
+//                id?.let { pensamentoRepository.deletePensamento(it) }
+//                _pensamentos.value = _pensamentos.value.filter { it.id != id }
+//            } catch (e: Exception) {
+//                _errorMessage.value = e.message
+//            }
+//        }
+//    }
+
+    fun deletePensamento(id: Int?) {
+        if (id == null) {
+            _errorMessage.value = "Pensamento inválido para deletar."
+            return
+        }
         viewModelScope.launch {
             try {
                 pensamentoRepository.deletePensamento(id)
-                _pensamentos.value = _pensamentos.value.filter { it.id.toString() != id }
+                _pensamentos.value = _pensamentos.value.filter { it.id != id }
+                if (_currentPensamento.value?.id == id) {
+                    _currentPensamento.value = null
+                }
             } catch (e: Exception) {
                 _errorMessage.value = e.message
+                Log.e("PensamentoViewModel", "Erro ao deletar pensamento", e)
             }
         }
     }
+
 
     fun createPensamento(pensamento: Pensamento) {
         viewModelScope.launch {
@@ -93,12 +114,12 @@ class PensamentoViewModel(
         }
     }
 
-    fun updatePensamento(id: String, pensamento: Pensamento) {
+    fun updatePensamento(id: Int, pensamento: Pensamento) {
         viewModelScope.launch {
             try {
                 val updatedPensamento = pensamentoRepository.updatePensamento(id, pensamento)
                 _pensamentos.value = _pensamentos.value.map {
-                    if (it.id.toString() == id) updatedPensamento else it
+                    if (it.id == id) updatedPensamento else it
                 }
             } catch (e: Exception) {
                 _errorMessage.value = e.message
