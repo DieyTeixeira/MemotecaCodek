@@ -1,5 +1,5 @@
 package com.codek.pensamentos.data.version
 
 /* VARIÁVEIS DE VERSÃO ATUAL DO CÓDIGO */
-val currentVersionCode = 1
-val currentVersionName = "1.0.0"
+val currentVersionCode = 4
+val currentVersionName = "1.3.0"

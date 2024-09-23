@@ -165,7 +165,7 @@ fun PensamentosScreen(
     Column(
         Modifier
             .background(backgroundColor)
-            .padding(top = 35.dp)
+            .padding(top = 10.dp)
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
